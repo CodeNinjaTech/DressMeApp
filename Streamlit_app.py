@@ -556,6 +556,39 @@ class Wardrobe:
         self.colors_df[self.colors_df['name'] == name]['hex'].item()
         return hex_value
 
+    # def get_color_value_by_clickpoint_detection_of_article_with_id(self, img):
+    #     # Declaring global variables (are used later on)
+    #     global clicked, b, g, r, xpos, ypos
+    #     clicked = False
+    #     r = g = b = xpos = ypos = 0
+    #     window_open = False
+    #     text = ""
+    #     # Just try as long as a matching window is found
+    #     while not window_open:
+    #         try:
+    #             cv2.namedWindow('image')
+    #             cv2.setMouseCallback('image', draw_function, img)
+    #             window_open = True
+    #             while True:  # Check if the window is open            
+    #                 cv2.imshow("image", img)
+    #                 if (clicked):
+    #                     cv2.rectangle(img, (20,20), (750,60), (b,g,r), -1)
+    #                     # Creating text string to display (Color name and RGB values)
+    #                     text = self.get_color_name(r, g, b, self.colors_df) 
+    #                     cv2.putText(img, text, (50,50), 2, 0.8, (255,255,255), 2, cv2.LINE_AA)
+    #                     # For very light colours we will display text in black colour
+    #                     if(r + g + b >= 600):
+    #                         cv2.putText(img, text,(50,50),2,0.8,(0,0,0),2,cv2.LINE_AA)
+    #                     clicked=False
+    #                 # Break the loop when user hits 'esc' key or closes the window
+    #                 if (cv2.waitKey(20) & 0xFF == 27) or cv2.getWindowProperty('image', 0) < 0:
+    #                     break
+    #         except:
+    #             # Destroy any "erroneous" windows OpenCV might have created
+    #             cv2.destroyAllWindows()
+    #     cv2.destroyAllWindows()
+    #     return text
+
     def get_color_value_by_clickpoint_detection_of_article_with_id(self, img):
         # Declaring global variables (are used later on)
         global clicked, b, g, r, xpos, ypos
@@ -569,18 +602,18 @@ class Wardrobe:
                 cv2.namedWindow('image')
                 cv2.setMouseCallback('image', draw_function, img)
                 window_open = True
-                while True:  # Check if the window is open            
+                while True:  # Check if the window is open
                     cv2.imshow("image", img)
                     if (clicked):
-                        cv2.rectangle(img, (20,20), (750,60), (b,g,r), -1)
+                        cv2.rectangle(img, (20, 20), (750, 60), (b, g, r), -1)
                         # Creating text string to display (Color name and RGB values)
-                        text = self.get_color_name(r, g, b, self.colors_df) 
-                        cv2.putText(img, text, (50,50), 2, 0.8, (255,255,255), 2, cv2.LINE_AA)
-                        # For very light colours we will display text in black colour
-                        if(r + g + b >= 600):
-                            cv2.putText(img, text,(50,50),2,0.8,(0,0,0),2,cv2.LINE_AA)
-                        clicked=False
-                    # Break the loop when user hits 'esc' key or closes the window
+                        text = self.get_color_name(r, g, b, self.colors_df)
+                        cv2.putText(img, text, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2, cv2.LINE_AA)
+                        # For very light colours, display text in black color
+                        if (r + g + b >= 600):
+                            cv2.putText(img, text, (50, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 0), 2, cv2.LINE_AA)
+                        clicked = False
+                    # Break the loop when the user hits 'esc' key or closes the window
                     if (cv2.waitKey(20) & 0xFF == 27) or cv2.getWindowProperty('image', 0) < 0:
                         break
             except:
@@ -1009,6 +1042,7 @@ if identify:
             # Read and resize image
             img = ward.resize_article_image_with_width(sel_id, 600)
             det_colour = ward.get_color_value_by_clickpoint_detection_of_article_with_id(img)
+            print('det_colour', det_colour)
             st.markdown('#### This is the chosen closest color hue in our database:')
             colmn1, colmn2, _ = st.columns(3)
             with colmn1:
