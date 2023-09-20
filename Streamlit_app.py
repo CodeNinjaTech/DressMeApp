@@ -928,14 +928,13 @@ insert = st.sidebar.checkbox('Insert New Clothes', help='Insert new articles to 
                               or by local files (batch-insert)')
 manage = st.sidebar.checkbox('Update/Delete Clothes', help="Update article's features values or delete articles in your dressmeup\
                               wardrobe")
-identify = st.sidebar.checkbox('Click & Update Colour', help="Identify article's colour by double-clicking on a point in the photo")
 combine = st.sidebar.checkbox('Combine Clothes', help='Make combinations from the clothes in your dressmeup wardrobe or from\
                                an online article and the clothes in your wardrobe')
 planner = st.sidebar.checkbox('Daily Planner', help='Plan your daily occasions')
 usage = st.sidebar.checkbox('Clothes Usage Statistics', help='Find the percent of clothes usage in your wardrobe\'s combinations')
 delete = st.sidebar.checkbox('Delete My Wardrobe', help='Delete the whole dressmeup wardrobe')
 
-if not view and not insert and not manage and not identify and not combine and not usage and not planner and not delete:
+if not view and not insert and not manage and not combine and not usage and not planner and not delete:
     '''
     You can check any option of the sidebar checkboxes to operate the following functions:
 
@@ -943,12 +942,11 @@ if not view and not insert and not manage and not identify and not combine and n
     2. Insert new articles to your wardrobe, either by URL path (single-insert) or by local files (batch-insert) 
     (Insert New Clothes option).
     3. Update article's features values or delete articles in your dressmeup wardrobe (Update/Delete Clothes option).
-    4. Identify article's colour by double-clicking on a point in the photo (Click & Update Colour option).
-    5. Make combinations from the clothes in your dressmeup wardrobe or from an online article and the clothes in your wardrobe 
+    4. Make combinations from the clothes in your dressmeup wardrobe or from an online article and the clothes in your wardrobe 
     (Combine Clothes option).
-    6. Plan your daily occasions (Daily Planner option).
-    7. Find the percent of clothes usage in your wardrobe's combinations (Clothes Usage Statistics option).
-    8. Delete the whole dressmeup wardrobe (Delete My Wardrobe option).
+    5. Plan your daily occasions (Daily Planner option).
+    6. Find the percent of clothes usage in your wardrobe's combinations (Clothes Usage Statistics option).
+    7. Delete the whole dressmeup wardrobe (Delete My Wardrobe option).
     '''
 
 # Sidebar option to view the SQLite table
@@ -1025,33 +1023,6 @@ if manage:
                                            selected_colour, selected_season, selected_usage, selected_description))
         # Create a button to delete the article
         st.button('Delete article from Wardrobe', on_click=delete_article, type="primary")
-    else:
-        st.info('Firstly insert clothes in your wardrobe (Insert New Clothes option).')
-
-# Sidebar option to create a pop-up window containing a photo
-if identify:
-    st.markdown('## Article Colour Point Detection')
-    if (len(ward.get_existing_ids()) > 0):
-        # Article ID
-        sel_id = st.selectbox('Select Image of Article ID:', tuple(ward.get_existing_ids()))
-        # Article's Image
-        img = ward.get_article_image_path(sel_id)
-        st.image(img, use_column_width='auto', channels='BGR')
-        det_colour = ward.get_baseColour_of_article_with_id(sel_id)
-        if st.button('Identify Article Colour', type='primary'):
-            # Read and resize image
-            img = ward.resize_article_image_with_width(sel_id, 600)
-            det_colour = ward.get_color_value_by_clickpoint_detection_of_article_with_id(img)
-            print('det_colour', det_colour)
-            st.markdown('#### This is the chosen closest color hue in our database:')
-            colmn1, colmn2, _ = st.columns(3)
-            with colmn1:
-                st.markdown(f'###### {det_colour}')
-                hex_value = ward.colors_df[ward.colors_df['name'] == det_colour]['hex'].item()
-            with colmn2:
-                st.color_picker('Closest color', hex_value, label_visibility='collapsed')
-            st.button("Update Base Colour", on_click=update_table, 
-                      kwargs=dict(id=sel_id, new_value=det_colour), type="primary")
     else:
         st.info('Firstly insert clothes in your wardrobe (Insert New Clothes option).')
 
