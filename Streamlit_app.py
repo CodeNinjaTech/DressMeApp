@@ -1163,7 +1163,7 @@ if planner:
                         ward.insert_occasion(d, t1, t2, selected_usage, description_1, description_2, description)
                         st.success("Occasion inserted.", icon="✅")
             else:
-                st.info(f'No {selected_usage} Combination of Clothes for {season} has been created in your Wardrobe.')
+                st.info(f'No {selected_usage} combination of clothes for {season} has been created in your Wardrobe.')
         with tabs2:
             df = st.dataframe(ward.get_all_occasions(), 
                             #   column_config={"topwear": st.column_config.ImageColumn(),
