@@ -788,6 +788,8 @@ class Wardrobe:
         fig.update_xaxes(title_text='Percentage (%)')  # Change the x-axis label
         # Customize the y-axis labels to start from 0 and be sequential
         fig.update_yaxes(tickvals=combined_df['ID'], ticktext=combined_df['ID'], categoryorder='array', title_text='Article ID')
+        # Fixed width
+        fig.update_traces(width=1)
         # Hide the legend
         fig.update_layout(showlegend=False)
         return fig
