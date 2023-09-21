@@ -184,6 +184,7 @@ def delete_wardrobe():
                     print(f"Error deleting {file_path}: {str(e)}")
 
 
+@st.cache_data
 class Wardrobe:
 
     # Constructor for the Wardrobe class and creation of the wardrobe table
@@ -217,7 +218,6 @@ class Wardrobe:
             sort_values(by='usage_enc')['usage'].tolist()
         self.target_names = [subCategory_labels, articleType_labels, gender_labels, season_labels, usage_labels]
 
-    @st.cache_resource
     def create_model(self, df):
         weights_path = 'data/weights.019-1.28.hdf5'
         # Define image dimensions
