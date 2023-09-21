@@ -184,7 +184,7 @@ def delete_wardrobe():
                     print(f"Error deleting {file_path}: {str(e)}")
 
 
-@st.cache_data
+@st.cache_resource
 class Wardrobe:
 
     # Constructor for the Wardrobe class and creation of the wardrobe table
