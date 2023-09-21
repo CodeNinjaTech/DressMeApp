@@ -168,6 +168,7 @@ def insert_articles(image_list):
 def delete_wardrobe():
     ward = Wardrobe()
     ward.delete_wardrobe()
+    st.cache_resource.clear()
     folder_path = 'streamlit_uploaded_photos/'
     # Verify if the folder exists
     if os.path.exists(folder_path):
@@ -183,8 +184,52 @@ def delete_wardrobe():
                 except Exception as e:
                     print(f"Error deleting {file_path}: {str(e)}")
 
-
 @st.cache_resource
+def create_model(df):
+    weights_path = 'data/weights.019-1.28.hdf5'
+    # Define image dimensions
+    img_height, img_width = 224, 224
+    # Use the Efficient Net v2-S pretrained model as the feature extractor
+    efficient_V2S_model = efficientnet_v2.EfficientNetV2S(include_top=False,
+                            input_shape=(img_height, img_width, 3),
+                            pooling='avg',
+                            weights='imagenet')
+    # Fine-tune from this layer onwards
+    fine_tune_at = 450
+    # Freeze the layers of the Efficient Net model (514 layers) to use it as a feature extractor
+    for layer in efficient_V2S_model.layers[:fine_tune_at]:
+        layer.trainable = False
+    # Create the multi-output model
+    inputs = Input(shape=(img_height, img_width, 3))
+    x = efficientnet_v2.preprocess_input(inputs)
+    x = Lambda(lambda img: tf.image.rgb_to_grayscale(img))(x)
+    x = Lambda(lambda img: tf.image.grayscale_to_rgb(img))(x)
+    x = efficient_V2S_model(x)
+    x = Flatten()(x)
+    x = Dropout(0.2)(x)  # Regularize with dropout
+    x = Dense(512, activation='relu')(x)
+    # Define the number of classes for each output column
+    num_classes_articleType = len(df['articleType'].unique())
+    num_classes_usage = len(df['usage'].unique())
+    # Output layers for each output column
+    subCategory_output = Dense(1, activation='sigmoid', name='subCategory_output')(x)
+    articleType_output = Dense(num_classes_articleType, activation='softmax', name='articleType_output')(x)
+    gender_output = Dense(1, activation='sigmoid', name='gender_output')(x)
+    season_output = Dense(1, activation='sigmoid', name='season_output')(x)
+    usage_output = Dense(num_classes_usage, activation='softmax', name='usage_output')(x)
+    # Create the model with multiple output layers
+    model = Model(inputs=inputs, outputs=[subCategory_output, articleType_output, gender_output, season_output, usage_output])
+    model.compile(optimizer=Adam(0.0001),
+            loss={'subCategory_output': 'binary_crossentropy',
+                'articleType_output': 'sparse_categorical_crossentropy',
+                'gender_output': 'binary_crossentropy',
+                'season_output': 'binary_crossentropy',
+                'usage_output': 'sparse_categorical_crossentropy'},
+            metrics=['accuracy'])
+    model.load_weights(weights_path)
+    return model
+
+
 class Wardrobe:
 
     # Constructor for the Wardrobe class and creation of the wardrobe table
@@ -202,7 +247,7 @@ class Wardrobe:
                   subCategory TEXT, articleType TEXT, gender TEXT, season TEXT, usage TEXT, 
                   baseColour TEXT, description TEXT, image_path TEXT)''')
         df = pd.read_csv('data/df.csv', sep = '\t').drop_duplicates()
-        self.model = self.create_model(df)
+        self.model = create_model(df)
         # Create a DataFrame to store the encoded values and their corresponding labels
         subCategory_labels = df[['subCategory_enc', 'subCategory']].drop_duplicates().\
             sort_values(by='subCategory_enc')['subCategory'].tolist()
@@ -217,50 +262,6 @@ class Wardrobe:
         usage_labels = df[['usage_enc', 'usage']].drop_duplicates().\
             sort_values(by='usage_enc')['usage'].tolist()
         self.target_names = [subCategory_labels, articleType_labels, gender_labels, season_labels, usage_labels]
-
-    def create_model(self, df):
-        weights_path = 'data/weights.019-1.28.hdf5'
-        # Define image dimensions
-        img_height, img_width = 224, 224
-        # Use the Efficient Net v2-S pretrained model as the feature extractor
-        efficient_V2S_model = efficientnet_v2.EfficientNetV2S(include_top=False,
-                                input_shape=(img_height, img_width, 3),
-                                pooling='avg',
-                                weights='imagenet')
-        # Fine-tune from this layer onwards
-        fine_tune_at = 450
-        # Freeze the layers of the Efficient Net model (514 layers) to use it as a feature extractor
-        for layer in efficient_V2S_model.layers[:fine_tune_at]:
-            layer.trainable = False
-        # Create the multi-output model
-        inputs = Input(shape=(img_height, img_width, 3))
-        x = efficientnet_v2.preprocess_input(inputs)
-        x = Lambda(lambda img: tf.image.rgb_to_grayscale(img))(x)
-        x = Lambda(lambda img: tf.image.grayscale_to_rgb(img))(x)
-        x = efficient_V2S_model(x)
-        x = Flatten()(x)
-        x = Dropout(0.2)(x)  # Regularize with dropout
-        x = Dense(512, activation='relu')(x)
-        # Define the number of classes for each output column
-        num_classes_articleType = len(df['articleType'].unique())
-        num_classes_usage = len(df['usage'].unique())
-        # Output layers for each output column
-        subCategory_output = Dense(1, activation='sigmoid', name='subCategory_output')(x)
-        articleType_output = Dense(num_classes_articleType, activation='softmax', name='articleType_output')(x)
-        gender_output = Dense(1, activation='sigmoid', name='gender_output')(x)
-        season_output = Dense(1, activation='sigmoid', name='season_output')(x)
-        usage_output = Dense(num_classes_usage, activation='softmax', name='usage_output')(x)
-        # Create the model with multiple output layers
-        model = Model(inputs=inputs, outputs=[subCategory_output, articleType_output, gender_output, season_output, usage_output])
-        model.compile(optimizer=Adam(0.0001),
-              loss={'subCategory_output': 'binary_crossentropy',
-                    'articleType_output': 'sparse_categorical_crossentropy',
-                    'gender_output': 'binary_crossentropy',
-                    'season_output': 'binary_crossentropy',
-                    'usage_output': 'sparse_categorical_crossentropy'},
-              metrics=['accuracy'])
-        model.load_weights(weights_path)
-        return model
         
     def read_image_from_path(self, path):
         if (path[:4].lower() == 'http' or path[:3].lower() == 'www'):
@@ -526,6 +527,7 @@ class Wardrobe:
         query = f"UPDATE wardrobe SET subCategory = '{selected_category}', articleType = '{selected_type}',\
         gender = '{selected_gender}', baseColour = '{selected_colour}', season = '{selected_season}',\
         usage = '{selected_usage}', description = '{selected_description}' WHERE id = {selected_id}"
+        print('query=',query)
         c.execute(query)
         conn.commit()
     
@@ -987,41 +989,43 @@ if manage:
     if (len(ward.get_existing_ids()) > 0):
         # Article ID
         selected_id = st.selectbox('Select Article ID:', tuple(ward.get_existing_ids()))
-        # Article's Image
-        img = ward.get_article_image_path(selected_id)
-        st.image(img, use_column_width='auto', channels='BGR')
-        with st.form("update_article"):
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                # Update Article's Category value
-                current_category = category_values.index(ward.get_subCategory_of_article_with_id(selected_id))
-                selected_category = st.selectbox('Select Category:', category_values, index=current_category)
-                # Update Article's Type value
-                current_type = type_values.index(ward.get_articleType_of_article_with_id(selected_id))
-                selected_type = st.selectbox('Select Type:', type_values, index=current_type)
-            with col2:
-                # Update Article's Gender/Age Group
-                current_gender = gender_values.index(ward.get_gender_of_article_with_id(selected_id))
-                selected_gender = st.selectbox('Select Gender/Age Group:', gender_values, index=current_gender)
-                # Update Article's baseColour
-                current_colour = colour_values.index(ward.get_baseColour_of_article_with_id(selected_id))
-                selected_colour = st.selectbox('Select Base Colour:', colour_values, index=current_colour)
-            with col3:
-                # Update Article's Season
-                current_season = season_values.index(ward.get_season_of_article_with_id(selected_id))
-                selected_season = st.selectbox('Select Season:', season_values, index=current_season)
-                # Update Article's Usage
-                current_usage = usage_values.index(ward.get_usage_of_article_with_id(selected_id))
-                selected_usage = st.selectbox('Select Usage:', usage_values, index=current_usage)
-            # Update Article's Description
-            current_description = ward.get_description_of_article_with_id(selected_id)
-            selected_description = st.text_input('Enter Article Description:', 
-                                                key="art_descr", placeholder=current_description)
-            if selected_description == '':
-                selected_description = current_description
-            st.form_submit_button("Update Article", on_click=update_article_with_id, 
-                                     args=(selected_id, selected_category, selected_type, selected_gender,
-                                           selected_colour, selected_season, selected_usage, selected_description))
+        man_col1, man_col2 = st.columns(2)
+        with man_col1:
+            # Article's Image
+            img = ward.get_article_image_path(selected_id)
+            st.image(img, use_column_width='auto', channels='BGR')
+        with man_col2:        
+            with st.form("update_article"):
+                col1, col2 = st.columns(2)
+                with col1:
+                    # Update Article's Category value
+                    current_category = category_values.index(ward.get_subCategory_of_article_with_id(selected_id))
+                    selected_category = st.selectbox('Select Category:', category_values, index=current_category)
+                    # Update Article's Type value
+                    current_type = type_values.index(ward.get_articleType_of_article_with_id(selected_id))
+                    selected_type = st.selectbox('Select Type:', type_values, index=current_type)
+                    # Update Article's Gender/Age Group
+                    current_gender = gender_values.index(ward.get_gender_of_article_with_id(selected_id))
+                    selected_gender = st.selectbox('Select Gender/Age Group:', gender_values, index=current_gender)                    
+                with col2:
+                    # Update Article's baseColour
+                    current_colour = colour_values.index(ward.get_baseColour_of_article_with_id(selected_id))
+                    selected_colour = st.selectbox('Select Base Colour:', colour_values, index=current_colour)
+                    # Update Article's Season
+                    current_season = season_values.index(ward.get_season_of_article_with_id(selected_id))
+                    selected_season = st.selectbox('Select Season:', season_values, index=current_season)
+                    # Update Article's Usage
+                    current_usage = usage_values.index(ward.get_usage_of_article_with_id(selected_id))
+                    selected_usage = st.selectbox('Select Usage:', usage_values, index=current_usage)
+                # Update Article's Description
+                current_description = ward.get_description_of_article_with_id(selected_id)
+                selected_description = st.text_input('Enter Article Description:', 
+                                                    key="art_descr", placeholder=current_description)
+                if selected_description == '':
+                    selected_description = current_description
+                if st.form_submit_button("Update Article"):
+                    update_article_with_id(selected_id, selected_category, selected_type, selected_gender, 
+                                        selected_colour, selected_season, selected_usage, selected_description)
         # Create a button to delete the article
         st.button('Delete article from Wardrobe', on_click=delete_article, type="primary")
     else:
