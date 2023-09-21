@@ -217,6 +217,7 @@ class Wardrobe:
             sort_values(by='usage_enc')['usage'].tolist()
         self.target_names = [subCategory_labels, articleType_labels, gender_labels, season_labels, usage_labels]
 
+    @st.cache
     def create_model(self, df):
         weights_path = 'data/weights.019-1.28.hdf5'
         # Define image dimensions
