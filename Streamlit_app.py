@@ -1141,7 +1141,7 @@ if planner:
         tabs1, tabs2, tabs3 = st.tabs(["Plan an Occasion", "View Occasions", "Delete Occasions"])
         with tabs1:
             d = st.date_input("When's your occasion")
-            if d.month in range(3,9):
+            if d.month in range(4,10):
                 season = 'Spring/Summer'
             else:
                 season = 'Fall/Winter'
